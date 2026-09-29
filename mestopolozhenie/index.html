@@ -1,0 +1,957 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Определить местоположение человека — проверка геоданных | FollowPulse</title>
+  <meta name="description" content="Проверьте публичную информацию о местоположении и маршрутах человека только с его согласия или по предоставленным данным. Без скрытого слежения и обхода приватности.">
+  <meta name="robots" content="index,follow">
+  <link rel="canonical" href="https://followpulse.ru/">
+  <link rel="icon" href="data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3e%3crect width='32' height='32' rx='8' fill='%23ff4757'/%3e%3cpath d='M12 20a6 6 0 1 1 8-8' stroke='white' stroke-width='2.4' fill='none' stroke-linecap='round'/%3e%3ccircle cx='16' cy='16' r='2.2' fill='white'/%3e%3c/svg%3e">
+  <style>
+    :root { 
+      --tg: #2AABEE; 
+      --tg2: #229ED9; 
+      --bot: #1e2a37; 
+      --me: #2b5278; 
+      --ink: #e8eef4; 
+      --muted: #8aa0b4; 
+      --line: #2a3a49;
+      --red: #ff3347; 
+      --org: #ff0000; 
+      --alert: #ff4757;
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { margin: 0; min-height: 100%; overflow-x: hidden; }
+    img, svg { max-width: 100%; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      color: #fff; min-height: 100vh; min-height: 100dvh;
+      background:
+        radial-gradient(900px 520px at 32% -8%, rgba(255, 51, 71, .25), transparent 60%),
+        radial-gradient(700px 480px at 78% 0%, rgba(255, 0, 0, .15), transparent 60%),
+        #0b0b0e;
+    }
+    /* ==== раскладка: слева преленд, справа чат ==== */
+    .wrap {
+      max-width: 1140px; margin: 0 auto; min-height: 100vh; min-height: 100dvh;
+      display: flex; align-items: center; justify-content: space-between; gap: 48px; padding: 40px 40px;
+    }
+    .hero { flex: 1 1 auto; max-width: 600px; }
+    .stage { flex: 0 0 auto; width: 446px; }
+    /* logo */
+    .logo { display: flex; align-items: center; gap: 2px; font-weight: 900; letter-spacing: 1px; font-size: 24px; margin-bottom: 36px; text-transform: uppercase; color: var(--red); text-shadow: 0 0 10px rgba(255,51,71,0.4); }
+    .logo .bars { display: inline-flex; align-items: flex-end; gap: 2.5px; height: 20px; margin: 0 5px 2px; }
+    .logo .bars i { width: 3.5px; border-radius: 2px; display: block; }
+    .logo .bars i:nth-child(1) { height: 9px; background: #fff; }
+    .logo .bars i:nth-child(2) { height: 17px; background: var(--red); }
+    .logo .bars i:nth-child(3) { height: 12px; background: var(--org); }
+    /* headline */
+    .h1 { font-size: 46px; line-height: 1.05; font-weight: 900; letter-spacing: -1px; margin: 0 0 18px; text-transform: uppercase; }
+    .h1 .g { background: linear-gradient(92deg, var(--red), var(--org)); -webkit-background-clip: text; background-clip: text; color: transparent; animation: pulse-text 2s infinite; }
+    @keyframes pulse-text { 0%, 100% { filter: drop-shadow(0 0 8px rgba(255,51,71,0.5)); } 50% { filter: drop-shadow(0 0 15px rgba(255,51,71,0.9)); } }
+    .sub { font-size: 18px; line-height: 1.55; color: #c4c8d0; max-width: 490px; margin: 0 0 26px; }
+    .sub b { color: #fff; font-weight: 700; border-bottom: 1px dashed var(--red); }
+    /* живой тикер «прямо сейчас» */
+    .live { background: rgba(255, 51, 71, .08); border: 1px solid rgba(255, 51, 71, .2); border-radius: 16px; padding: 14px 16px; max-width: 470px; backdrop-filter: blur(4px); }
+    .live .lab { display: flex; align-items: center; gap: 8px; font-size: 12.5px; letter-spacing: .4px; text-transform: uppercase; color: var(--red); font-weight: 800; margin-bottom: 8px; }
+    .live .lab .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--red); box-shadow: 0 0 0 0 rgba(255, 51, 71, .6); animation: ping 1.8s infinite; }
+    @keyframes ping { 0% { box-shadow: 0 0 0 0 rgba(255, 51, 71, .6); } 70% { box-shadow: 0 0 0 9px rgba(255, 51, 71, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 51, 71, 0); } }
+    #ticker { font-size: 15.5px; line-height: 1.4; min-height: 22px; transition: opacity .35s, transform .35s; font-family: monospace; }
+    #ticker b { color: var(--red); }
+    #ticker .em { font-style: normal; color: #8aa0b4; }
+    /* строка статистики */
+    .stats { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin-top: 18px; font-size: 14px; color: #aab0ba; }
+    .stats .s b { color: #fff; font-weight: 750; }
+    .stats .sep { opacity: .35; }
+    .stats .grn { color: var(--red); font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
+    .hint { margin-top: 26px; font-size: 14.5px; color: #8b919c; display: flex; align-items: center; gap: 9px; font-weight: 600; text-transform: uppercase; }
+    .hint .arw { color: var(--red); font-size: 20px; animation: nudge 1.4s infinite; }
+    @keyframes nudge { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(5px); } }
+
+    /* ==== чат-виджет (TG-стиль) ==== */
+    .phone {
+      width: 100%; height: min(760px, 86vh); display: flex; flex-direction: column; border-radius: 22px; overflow: hidden;
+      background: #0e1723 url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3e%3ccircle cx='4' cy='4' r='1' fill='%23172433'/%3e%3c/svg%3e");
+      box-shadow: 0 30px 80px rgba(255, 51, 71, .2), 0 0 0 1px rgba(255, 51, 71, .2); color: var(--ink);
+    }
+    .hdr { background: linear-gradient(180deg, #22303d, #1a2530); color: #fff; border-bottom: 1px solid rgba(255, 51, 71, .3); display: flex; align-items: center; gap: 12px; padding: 12px 14px; box-shadow: 0 1px 6px rgba(0,0,0,.5); z-index: 5; }
+    .hdr .av { width: 42px; height: 42px; border-radius: 50%; background: var(--red); display: flex; align-items: center; justify-content: center; flex: 0 0 auto; box-shadow: 0 0 10px rgba(255,51,71,0.5); }
+    .hdr .av svg { width: 26px; height: 26px; fill: white; }
+    .hdr .nm { font-weight: 800; font-size: 15.5px; line-height: 1.15; color: var(--red); text-transform: uppercase; }
+    .hdr .st { font-size: 12.5px; opacity: .85; display: flex; align-items: center; gap: 5px; font-family: monospace; }
+    .hdr .st b { width: 7px; height: 7px; border-radius: 50%; background: var(--red); display: inline-block; animation: blink 1.5s infinite; }
+    .hdr .menu { margin-left: auto; opacity: .9; font-size: 22px; line-height: 1; letter-spacing: 2px; }
+    .chat { flex: 1; overflow-y: auto; padding: 14px 12px 8px; display: flex; flex-direction: column; gap: 8px; scroll-behavior: smooth; }
+    .msg { max-width: 84%; padding: 8px 12px; border-radius: 16px; font-size: 15px; line-height: 1.4; position: relative; animation: pop .22s ease; white-space: pre-wrap; word-wrap: break-word; }
+    @keyframes pop { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; transform: none; } }
+    .bot { align-self: flex-start; background: var(--bot); border-bottom-left-radius: 5px; box-shadow: 0 1px 2px rgba(0,0,0,.5); border-left: 2px solid var(--red); }
+    .me { align-self: flex-end; background: var(--me); color: #fff; border-bottom-right-radius: 5px; box-shadow: 0 1px 2px rgba(0,0,0,.5); }
+    .msg small { display: block; font-size: 11px; color: var(--muted); text-align: right; margin-top: 2px; }
+    .msg b.hl { color: var(--red); text-transform: uppercase; }
+    .msg b.ok { color: #54d98c; }
+    .typing { align-self: flex-start; background: var(--bot); border-radius: 16px; border-bottom-left-radius: 5px; padding: 12px 15px; display: none; box-shadow: 0 1px 2px rgba(0,0,0,.25); }
+    .typing span { display: inline-block; width: 7px; height: 7px; margin: 0 2px; border-radius: 50%; background: var(--red); animation: blink 1.2s infinite; }
+    .typing span:nth-child(2) { animation-delay: .2s; } .typing span:nth-child(3) { animation-delay: .4s; }
+    @keyframes blink { 0%, 60%, 100% { opacity: .3; transform: translateY(0); } 30% { opacity: 1; transform: translateY(-3px); } }
+    .card { align-self: flex-start; max-width: 88%; background: #17222e; border-radius: 16px; border-bottom-left-radius: 5px; padding: 14px; box-shadow: 0 2px 15px rgba(255,51,71,.2); animation: pop .22s ease; border: 1px solid rgba(255,51,71,0.3); }
+    .card h4 { margin: 0 0 10px; font-size: 15px; display: flex; align-items: center; gap: 7px; color: var(--red); text-transform: uppercase; font-weight: 800; }
+    .card .row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 1px dashed var(--line); font-size: 14px; }
+    .card .row:last-child { border: none; }
+    .card .row .v { font-weight: 700; color: #fff; }
+    .card .blur { background: rgba(255,255,255,0.1); color: transparent; text-shadow: 0 0 8px rgba(255,255,255,0.7); user-select: none; padding: 0 5px; border-radius: 4px; display: inline-flex; align-items: center; gap: 5px; }
+    .card .blur::after { content: '🔒'; font-size: 12px; text-shadow: none; color: var(--red); }
+    .card .lock { margin-top: 10px; font-size: 12px; color: var(--red); display: flex; align-items: center; gap: 6px; font-weight: bold; background: rgba(255,51,71,0.1); padding: 8px; border-radius: 8px; }
+    .ava { width: 52px; height: 52px; border-radius: 50%; background: linear-gradient(135deg, var(--red), var(--org)); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 21px; flex: 0 0 auto; background-size: cover; background-position: center; overflow: hidden; box-shadow: 0 0 15px rgba(255,51,71,0.5); }
+    .ava.hasimg { background: #0e1723; }
+    .ava img { width: 100%; height: 100%; object-fit: cover; display: block; border-radius: 50%; }
+    .prof { display: flex; align-items: center; gap: 11px; }
+    .prof .nm { font-weight: 800; font-size: 15px; color: #fff; }
+    .prof .su { font-size: 12px; color: var(--red); }
+    .kb { align-self: stretch; display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin: 2px 2px 4px; animation: pop .22s ease; }
+    .kb.one { grid-template-columns: 1fr; }
+    .kb button { border: 1px solid rgba(255,51,71,.2); background: #1e2a37; color: #fff; font-weight: 700; font-size: 14.5px; padding: 12px; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,.5); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: .12s; }
+    .kb button:active { transform: scale(.97); background: rgba(255,51,71,.2); }
+    .kb button.ghost { background: transparent; border-color: rgba(255,255,255,.12); color: #93a3b3; box-shadow: none; font-weight: 550; }
+    .kb button.ghost:active { background: rgba(255,255,255,.04); }
+    .ico { width: 18px; height: 18px; flex: 0 0 auto; vertical-align: -4px; }
+    .kb button .ico { width: 19px; height: 19px; }
+    .kb button.cta { grid-column: 1/-1; background: linear-gradient(90deg, var(--red), var(--org)); color: #fff; font-size: 16px; font-weight: 900; padding: 15px; box-shadow: 0 4px 20px rgba(255,51,71,.6); text-transform: uppercase; }
+    .kb button.cta.pulse { animation: pulse 1.6s infinite; }
+    .kb button.cta.hot { background: linear-gradient(90deg, var(--red), #c0392b); box-shadow: 0 4px 20px rgba(255,51,71,.6); }
+    @keyframes pulse { 0%, 100% { box-shadow: 0 4px 14px rgba(255,51,71,.4); } 50% { box-shadow: 0 4px 25px rgba(255,51,71,.9); transform: scale(1.01); } }
+    .bar { display: none; background: #16212c; border-top: 1px solid rgba(255,51,71,0.3); padding: 8px 10px; gap: 8px; align-items: center; }
+    .bar.show { display: flex; }
+    .bar input { flex: 1; border: 1px solid rgba(255,51,71,0.5); background: #22303c; border-radius: 20px; padding: 11px 15px; font-size: 16px; outline: none; color: #fff; font-family: monospace; }
+    .bar input::placeholder { color: #728696; font-family: sans-serif; }
+    .bar .send { width: 42px; height: 42px; border-radius: 50%; border: none; background: var(--red); color: #fff; flex: 0 0 auto; cursor: pointer; font-size: 19px; box-shadow: 0 0 10px rgba(255,51,71,0.5); }
+    .bar .send:active { background: var(--org); transform: scale(0.95); }
+
+    /* ===== адаптив ==== */
+    @media (max-width: 900px) {
+      .wrap { flex-direction: column; gap: 26px; padding: 26px 18px 30px; align-items: stretch; min-height: 0; }
+      .hero { max-width: none; text-align: center; }
+      .logo { justify-content: center; margin-bottom: 20px; }
+      .h1 { font-size: 32px; }
+      .sub { font-size: 15.5px; margin: 0 auto 20px; }
+      .live { margin: 0 auto; } .stats { justify-content: center; }
+      .hint { display: none; }
+      .stage { width: 100%; max-width: 460px; margin: 0 auto; }
+      .phone { height: clamp(520px, 78svh, 720px); min-height: 0; }
+    }
+    @media (max-width: 900px) and (max-height: 720px) { .h1 { font-size: 28px; } .sub { display: none; } }
+
+    /* ===== шапка / навбар ===== */
+    .nav { position: sticky; top: 0; z-index: 60; background: rgba(11,11,14,.9); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255,51,71,.2); }
+    .nav-in { max-width: 1140px; margin: 0 auto; padding: 13px 40px; padding-top: max(13px, env(safe-area-inset-top)); display: flex; align-items: center; gap: 22px; }
+    .nav .logo { font-size: 20px; margin: 0; }
+    
+    /* Переключатель языков */
+    .lang-switch { display: flex; align-items: center; gap: 6px; font-weight: 800; font-size: 14px; margin-left: auto; margin-right: 18px; }
+    .lang-switch span { color: #8aa0b4; cursor: pointer; transition: color .2s; }
+    .lang-switch span:hover { color: #fff; }
+    .lang-switch span.active { color: var(--red); text-shadow: 0 0 8px rgba(255,51,71,.5); }
+    .lang-switch .sep { color: rgba(255,51,71,.3); font-weight: 400; cursor: default; }
+
+    .nav-links { display: flex; align-items: center; gap: 26px; margin-left: 18px; }
+    .nav-links a { color: #cfd6df; text-decoration: none; font-weight: 600; font-size: 15px; transition: color .15s; cursor: pointer; text-transform: uppercase; }
+    .nav-links a:hover { color: #fff; }
+    .nav-hot { color: var(--red) !important; font-weight: 800 !important; }
+    .nav-cta { margin-left: 0; background: linear-gradient(92deg, var(--red), var(--org)); color: #fff; font-weight: 900; font-size: 13.5px; letter-spacing: .6px; text-transform: uppercase; padding: 12px 22px; border-radius: 12px; text-decoration: none; box-shadow: 0 8px 24px rgba(255,51,71,.4); white-space: nowrap; cursor: pointer; transition: transform .15s; }
+    .nav-cta:hover { transform: translateY(-2px); }
+    .wrap { min-height: calc(100vh - 60px); min-height: calc(100dvh - 60px); }
+
+    /* ===== секции под первым экраном ===== */
+    .sec { padding: 80px 20px; border-top: 1px solid rgba(255,51,71,.1); background: #0b0b0e; }
+    .sec-in { max-width: 1080px; margin: 0 auto; }
+    .sec-h { font-size: 36px; line-height: 1.15; font-weight: 900; text-align: center; margin: 0 0 12px; letter-spacing: -1px; text-transform: uppercase; color: #fff; text-shadow: 0 0 15px rgba(255,51,71,0.3); }
+    .sec-sub { color: #ff8095; font-size: 18px; line-height: 1.5; text-align: center; max-width: 700px; margin: 0 auto 44px; font-weight: 600; }
+    .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .fcard { background: rgba(255,51,71,.05); border: 1px solid rgba(255,51,71,.2); border-radius: 18px; padding: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); transition: transform 0.3s; }
+    .fcard:hover { transform: translateY(-5px); border-color: var(--red); background: rgba(255,51,71,.1); }
+    .fcard .c-t { font-size: 20px; font-weight: 800; margin-bottom: 12px; display: flex; align-items: center; gap: 10px; color: #fff; text-transform: uppercase; }
+    .fcard p { margin: 0; color: #a7adb8; font-size: 16px; line-height: 1.6; }
+    
+    .revs { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+    .rev { background: rgba(255,255,255,.03); border: 1px solid rgba(255,51,71,.15); border-radius: 18px; padding: 26px; display: flex; flex-direction: column; border-top: 3px solid var(--red); }
+    .rev .q { color: #d3d8df; font-size: 15px; line-height: 1.65; font-style: italic; margin: 0 0 18px; flex: 1; }
+    .rev .who { display: flex; align-items: center; gap: 12px; border-top: 1px dashed rgba(255,51,71,.2); padding-top: 16px; }
+    .rev .ava { width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, var(--red), var(--org)); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 18px; color: #fff; flex: 0 0 auto; box-shadow: 0 0 10px rgba(255,51,71,0.5); }
+    .rev .nm { font-weight: 800; font-size: 15px; color: #fff; }
+    .rev .tag { color: var(--red); font-size: 12.5px; margin-top: 2px; font-weight: bold; }
+    
+    .fcta { padding: 90px 20px 100px; text-align: center; position: relative; overflow: hidden; background: #08080a; }
+    .fcta::before { content: ""; position: absolute; left: 50%; top: 50%; width: 800px; height: 800px; transform: translate(-50%,-50%); background: radial-gradient(circle, rgba(255,51,71,.15), transparent 60%); pointer-events: none; }
+    .cta-in { position: relative; max-width: 640px; margin: 0 auto; z-index: 2; }
+    .cta-h { font-size: 44px; line-height: 1.1; font-weight: 900; margin: 0 0 16px; letter-spacing: -1px; text-transform: uppercase; color: #fff; text-shadow: 0 0 20px rgba(255,51,71,0.5); }
+    .cta-sub { color: #a7adb8; font-size: 18px; line-height: 1.55; margin: 0 0 35px; }
+    .cta-btn { display: inline-block; background: linear-gradient(92deg, var(--red), var(--org)); color: #fff; font-weight: 900; font-size: 18px; padding: 22px 45px; border-radius: 12px; text-decoration: none; cursor: pointer; box-shadow: 0 14px 40px rgba(255,51,71,.5); transition: transform .12s, filter .12s; text-transform: uppercase; letter-spacing: 1px; }
+    .cta-btn:hover { filter: brightness(1.1); transform: scale(1.05); }
+    .cta-note { margin-top: 20px; color: #ff8095; font-size: 14px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; }
+
+    /* ===== футер ===== */
+    .foot { border-top: 1px solid rgba(255,51,71,.2); background: #050507; color: #5a6270; font-size: 12px; line-height: 1.65; }
+    .foot-in { max-width: 900px; margin: 0 auto; padding: 26px 40px; text-align: center; }
+    .foot-badges { margin-top: 15px; color: var(--red); font-weight: 800; letter-spacing: 1px; text-transform: uppercase; }
+    .seo-hub { padding: 82px 20px; border-top: 1px solid rgba(255,51,71,.1); background: #0b0b0e; }
+    .seo-in { max-width: 1080px; margin: 0 auto; }
+    .seo-h { font-size: 36px; line-height: 1.15; font-weight: 900; text-align: center; margin: 0 0 14px; text-transform: uppercase; }
+    .seo-sub { color: #a7adb8; font-size: 18px; line-height: 1.55; text-align: center; max-width: 740px; margin: 0 auto 38px; }
+    .seo-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:18px; }
+    .seo-card { display:block; color:#fff; text-decoration:none; background:rgba(255,51,71,.05); border:1px solid rgba(255,51,71,.2); border-radius:18px; padding:24px; transition:.2s; }
+    .seo-card:hover { transform:translateY(-4px); border-color:var(--red); background:rgba(255,51,71,.1); }
+    .seo-card h3 { margin:0 0 8px; font-size:19px; text-transform:uppercase; }
+    .seo-card p { margin:0; color:#a7adb8; line-height:1.55; }
+    .seo-limits { margin-top:28px; padding:22px; border:1px dashed rgba(255,51,71,.35); border-radius:16px; color:#c8cdd5; text-align:center; }
+    @media(max-width:760px){.seo-hub{padding:58px 14px}.seo-h{font-size:28px}.seo-sub{font-size:16px}.seo-grid{grid-template-columns:1fr}}
+    
+    @media (max-width: 900px) {
+      .nav-links { display: none; }
+      .nav-in { padding-inline: 18px; gap: 14px; }
+      .lang-switch { margin-left: auto; margin-right: 0; }
+      .nav-cta { padding-inline: 16px; }
+    }
+
+    @media (max-width: 760px) {
+      .lang-switch { margin: 0 0 0 auto; font-size: 12px; flex: 0 0 auto; }
+      .nav-in { padding: max(11px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) 11px max(14px, env(safe-area-inset-left)); gap: 10px; }
+      .nav .logo { font-size: clamp(15px, 4.5vw, 19px); letter-spacing: .5px; flex: 0 1 auto; min-width: 0; }
+      .nav .logo .bars { transform: scale(.82); margin-inline: 2px; }
+      .nav-cta { padding: 10px 12px; font-size: 11.5px; flex: 0 0 auto; }
+      .cards, .revs { grid-template-columns: 1fr; } .sec { padding: 60px 16px; } .sec-h { font-size: 28px; }
+      .cta-h { font-size: 32px; } .fcta { padding: 70px 16px 80px; }
+    }
+
+    @media (max-width: 480px) {
+      .wrap { gap: 22px; padding: 22px 12px 26px; }
+      .hero { text-align: left; }
+      .hero > .logo { justify-content: flex-start; font-size: 20px; margin-bottom: 16px; }
+      .h1 { font-size: clamp(27px, 9vw, 34px); line-height: 1.08; letter-spacing: -.6px; overflow-wrap: anywhere; }
+      .sub { font-size: 15px; line-height: 1.48; margin-bottom: 18px; }
+      .live { padding: 12px 13px; border-radius: 14px; }
+      #ticker { font-size: 14px; }
+      .stats { justify-content: flex-start; gap: 7px 10px; font-size: 13px; }
+      .stage { max-width: none; }
+      .phone { height: clamp(500px, 76svh, 680px); border-radius: 18px; }
+      .hdr { padding: 10px 12px; }
+      .hdr .av { width: 38px; height: 38px; }
+      .hdr .nm { font-size: 14px; }
+      .chat { padding-inline: 9px; }
+      .msg { max-width: 90%; font-size: 14px; }
+      .card { max-width: 94%; padding: 12px; }
+      .card .row { gap: 10px; align-items: flex-start; }
+      .card .row .v { text-align: right; overflow-wrap: anywhere; }
+      .kb { grid-template-columns: 1fr; }
+      .kb button { min-height: 44px; font-size: 14px; }
+      .bar { padding-bottom: max(8px, env(safe-area-inset-bottom)); }
+      .fcard, .rev { padding: 22px 18px; }
+      .fcard .c-t { font-size: 18px; align-items: flex-start; overflow-wrap: anywhere; }
+      .sec { padding: 48px 14px; }
+      .sec-h { font-size: clamp(25px, 8vw, 30px); overflow-wrap: anywhere; }
+      .sec-sub { font-size: 16px; margin-bottom: 30px; }
+      .fcta { padding: 58px 14px 66px; }
+      .cta-h { font-size: clamp(28px, 9vw, 34px); overflow-wrap: anywhere; }
+      .cta-sub { font-size: 16px; margin-bottom: 26px; }
+      .cta-btn { display: block; width: 100%; padding: 18px 14px; font-size: 16px; overflow-wrap: anywhere; }
+      .cta-note { font-size: 12px; line-height: 1.5; }
+      .foot-in { padding: 24px 16px max(24px, env(safe-area-inset-bottom)); }
+    }
+
+    @media (max-width: 360px) {
+      .nav-in { gap: 7px; padding-inline: 10px; }
+      .nav .logo { font-size: 14px; }
+      .nav .logo .bars { display: none; }
+      .lang-switch { font-size: 11px; gap: 4px; }
+      .nav-cta { padding: 9px 8px; font-size: 10.5px; }
+      .phone { border-radius: 14px; }
+    }
+
+    @media (max-width: 900px) and (orientation: landscape) {
+      .phone { height: max(480px, calc(100svh - 24px)); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
+    }
+  </style>
+
+  <!-- Yandex.Metrika counter -->
+  <script type="text/javascript">
+      (function(m,e,t,r,i,k,a){
+          m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
+          m[i].l=1*new Date();
+          for (var j = 0; j < document.scripts.length; j++) {if (document.scripts[j].src === r) { return; }}
+          k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)
+      })(window, document,'script','https://mc.yandex.ru/metrika/tag.js?id=110913688', 'ym');
+
+      ym(110913688, 'init', {ssr:true, webvisor:true, clickmap:true, ecommerce:"dataLayer", referrer: document.referrer, url: location.href, accurateTrackBounce:true, trackLinks:true});
+  </script>
+  <noscript><div><img src="https://mc.yandex.ru/watch/110913688" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
+  <!-- /Yandex.Metrika counter -->
+
+</head>
+<body>
+
+<header class="nav">
+  <div class="nav-in">
+    <div class="logo nav-logo">FOLLOW<span class="bars"><i></i><i></i><i></i></span>PULSE</div>
+    
+    <nav class="nav-links">
+      <a onclick="goScan('find')" data-i18n="nav_vuln">Возможности</a>
+      <a onclick="goScan('reviews')" data-i18n="nav_reports">Отчёты</a>
+      <a class="nav-hot" onclick="goScan()" data-i18n="nav_start">Начать проверку</a>
+    </nav>
+    <a class="nav-cta" onclick="goScan()" data-i18n="nav_cta">Проверить профиль</a>
+  </div>
+</header>
+
+<div class="wrap">
+  <!-- ЛЕВО: преленд -->
+  <div class="hero">
+    <h1 class="h1" data-i18n="h1">Проверка <span class="g">местоположения</span></h1>
+    <p class="sub" data-i18n="sub">Оцените предоставленные геоданные, публичные отметки и маршруты. Получайте <b>понятную сводку мест и времени</b> только законным способом и с согласия пользователя.</p>
+
+    <div class="live">
+      <div class="lab" data-i18n="live_radar"><span class="dot"></span> Проверка цифровых совпадений</div>
+      <div id="ticker">✈️ @m•••a — найдено <b>публичное упоминание</b> · <span class="em">только что</span></div>
+    </div>
+
+    <div class="stats">
+      <span class="s"><span data-i18n="st_search">Прямо сейчас ищут:</span> <b id="st-live">142</b></span>
+      <span class="sep">·</span>
+      <span class="s"><span data-i18n="st_base">Источники:</span> <b id="st-today">412 ТБ</b> <span data-i18n="st_dumps">публичных данных</span></span>
+      <span class="sep">·</span>
+      <span class="grn" data-i18n="st_anon">Конфиденциальная проверка</span>
+    </div>
+
+    <div class="hint" data-i18n="hint"><span class="arw">➜</span> Проясните сомнения в панели справа</div>
+  </div>
+
+  <!-- ПРАВО: чат-бот -->
+  <div class="stage">
+    <div class="phone">
+      <div class="hdr">
+        <div class="av">
+          <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>
+        </div>
+        <div>
+          <div class="nm">Cyber_OSINT_Bot</div>
+          <div class="st" data-i18n="bot_status"><b></b> терминал активен</div>
+        </div>
+        <div class="menu">⋮</div>
+      </div>
+
+      <div class="chat" id="chat">
+        <div class="typing" id="typing"><span></span><span></span><span></span></div>
+      </div>
+
+      <div class="bar" id="bar">
+        <input id="inp" placeholder="Введите цель (номер, логин)..." autocomplete="off">
+        <button class="send" id="send">➤</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<section id="find" class="sec">
+  <div class="sec-in">
+    <h2 class="sec-h" data-i18n="sec1_h">Когда слова не сходятся с фактами</h2>
+    <p class="sec-sub" data-i18n="sec1_sub">Один отчёт поможет собрать цифровые совпадения и понять, есть ли основания для серьёзного разговора.</p>
+    
+    <div class="cards">
+      <div class="fcard">
+        <div class="c-t" data-i18n="card1_t">🔎 Другие профили и имена</div>
+        <p data-i18n="card1_p">Одинаковые никнеймы и фотографии могут показать связанные страницы, о которых вам не рассказывали.</p>
+      </div>
+      <div class="fcard">
+        <div class="c-t" data-i18n="card2_t">⚠️ Несостыковки в информации</div>
+        <p data-i18n="card2_p">Разные имена, даты, города и описания профиля — повод не обвинять, а спокойно перепроверить факты.</p>
+      </div>
+      <div class="fcard">
+        <div class="c-t" data-i18n="card3_t">🖼️ Где ещё встречается фото</div>
+        <p data-i18n="card3_p">Проверьте фотографию, которой вправе распоряжаться, на возможные совпадения и страницы-копии.</p>
+      </div>
+      <div class="fcard">
+        <div class="c-t" data-i18n="card4_t">💬 Факты перед разговором</div>
+        <p data-i18n="card4_p">Получите больше контекста, чтобы обсудить тревогу спокойно и не строить отношения на догадках.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="reviews" class="sec">
+  <div class="sec-in">
+    <h2 class="sec-h" data-i18n="sec2_h">Не обвиняйте без фактов — сначала проверьте</h2>
+    <p class="sec-sub" data-i18n="sec2_sub">Иногда сомнения подтверждаются, иногда объясняются. В обоих случаях ясность лучше постоянной тревоги.</p>
+    
+    <div class="revs">
+      <div class="rev">
+        <p class="q" data-i18n="rev1_q">«Он стал прятать телефон и часто задерживаться. Я не хотела устраивать скандал без оснований, поэтому сначала проверила никнейм и спокойно поговорила о найденных несостыковках.»</p>
+        <div class="who">
+          <div class="ava" data-i18n="rev1_ava">А</div>
+          <div>
+            <div class="nm" data-i18n="rev1_nm">Анна В., 32</div>
+            <div class="tag" data-i18n="rev1_tag">Прояснила сомнения</div>
+          </div>
+        </div>
+      </div>
+      <div class="rev">
+        <p class="q" data-i18n="rev2_q">«Познакомились онлайн, но детали его истории постоянно менялись. Проверка показала профиль с теми же фотографиями и другим именем. Я вовремя остановилась.»</p>
+        <div class="who">
+          <div class="ava" data-i18n="rev2_ava">А</div>
+          <div>
+            <div class="nm" data-i18n="rev2_nm">Алина, 29</div>
+            <div class="tag" data-i18n="rev2_tag">Проверила новое знакомство</div>
+          </div>
+        </div>
+      </div>
+      <div class="rev">
+        <p class="q" data-i18n="rev3_q">«Я накручивала себя из-за похожего аккаунта. Отчёт помог увидеть, что совпадение было слабым. Мы поговорили — и напряжение наконец ушло.»</p>
+        <div class="who">
+          <div class="ava" data-i18n="rev3_ava">М</div>
+          <div>
+            <div class="nm" data-i18n="rev3_nm">Марина, 24</div>
+            <div class="tag" data-i18n="rev3_tag">Избежала поспешных выводов</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="seo-hub" id="possibilities">
+  <div class="seo-in">
+    <h2 class="seo-h">Проверяйте цифровые совпадения осознанно</h2>
+    <p class="seo-sub">FollowPulse объединяет несколько сценариев проверки в одном понятном отчёте — от поиска по фото до анализа открытых профилей и изменений.</p>
+    <div class="seo-grid">
+      <a class="seo-card" href="#scan"><h3>Проверка на измену</h3><p>Соберите открытые сигналы и совпадения, чтобы начать разговор с фактами, а не с догадками.</p></a>
+      <a class="seo-card" href="#scan"><h3>Поиск по фотографии</h3><p>Проверьте, где похожее изображение встречается в открытых источниках. Совпадение не доказывает личность.</p></a>
+      <a class="seo-card" href="#scan"><h3>Местоположение</h3><p>Анализируйте только добровольно предоставленную или публичную информацию о месте и маршрутах.</p></a>
+      <a class="seo-card" href="#scan"><h3>Скрытые сториз</h3><p>Поможем разобраться с доступностью публичного контента. Закрытые публикации не обходятся.</p></a>
+      <a class="seo-card" href="#scan"><h3>Анализ ВК и профиля</h3><p>Проверка страницы, открытой активности, изменений и связанных публичных профилей.</p></a>
+      <a class="seo-card" href="#scan"><h3>Проверка цифрового следа</h3><p>Номер, никнейм, фото или ссылка — отправная точка для аккуратной проверки открытых данных.</p></a>
+    </div>
+    <div class="seo-limits">FollowPulse не показывает скрытых друзей, не читает чужую переписку и не раскрывает достоверный список гостей страницы. Не передавайте пароль сервисам, которые обещают это по одной ссылке.</div>
+  </div>
+</section>
+
+<section class="fcta">
+  <div class="cta-in">
+    <h2 class="cta-h" data-i18n="cta_h">Хватит жить в догадках</h2>
+    <p class="cta-sub" data-i18n="cta_sub">Запустите проверку, соберите найденные совпадения в один отчёт и решите, о чём действительно стоит поговорить.</p>
+    <a class="cta-btn" onclick="goScan()" data-i18n="cta_btn">ПРОЯСНИТЬ СОМНЕНИЯ</a>
+    <div class="cta-note" data-i18n="cta_note">КОНФИДЕНЦИАЛЬНО · РЕЗУЛЬТАТЫ ТРЕБУЮТ РУЧНОЙ ПРОВЕРКИ</div>
+  </div>
+</section>
+
+<footer class="foot">
+  <div class="foot-in">
+    <span data-i18n="foot_text">© 2026 FollowPulse. Сервис анализирует общедоступную информацию. Проверяйте данные вручную и используйте сервис только в законных целях.</span>
+    <div class="foot-badges" data-i18n="foot_badges">ОТКРЫТЫЕ ИСТОЧНИКИ • ЗАЩИТА ДАННЫХ • КОНФИДЕНЦИАЛЬНО</div>
+  </div>
+</footer>
+
+<script>
+// ===== ТРАНСЛЯЦИИ =====
+const t = {
+  ru: {
+    nav_vuln: "Возможности", nav_reports: "Отчёты", nav_start: "Начать проверку", nav_cta: "Проверить профиль",
+    h1: "Подозреваете <span class=\"g\">измену?</span>",
+    sub: "Не обвиняйте без фактов. Проверьте номер, никнейм или фото, чтобы увидеть <b>связанные профили, совпадения и несостыковки</b> — и понять, есть ли повод для серьёзного разговора.",
+    live_radar: "<span class=\"dot\"></span> Проверка цифровых совпадений",
+    st_search: "Прямо сейчас проверяют:", st_base: "Источники:", st_dumps: "публичных данных", st_anon: "Конфиденциальная проверка",
+    hint: "<span class=\"arw\">➜</span> Проясните сомнения в панели справа",
+    bot_status: "<b></b> терминал активен",
+    sec1_h: "Когда слова не сходятся с фактами",
+    sec1_sub: "Один отчёт поможет собрать цифровые совпадения и понять, есть ли основания для серьёзного разговора.",
+    card1_t: "🔎 Другие профили и имена",
+    card1_p: "Одинаковые никнеймы и фотографии могут показать связанные страницы, о которых вам не рассказывали.",
+    card2_t: "⚠️ Несостыковки в информации",
+    card2_p: "Разные имена, даты, города и описания профиля — повод не обвинять, а спокойно перепроверить факты.",
+    card3_t: "🖼️ Где ещё встречается фото",
+    card3_p: "Проверьте фотографию, которой вправе распоряжаться, на возможные совпадения и страницы-копии.",
+    card4_t: "💬 Факты перед разговором",
+    card4_p: "Получите больше контекста, чтобы обсудить тревогу спокойно и не строить отношения на догадках.",
+    sec2_h: "Не обвиняйте без фактов — сначала проверьте",
+    sec2_sub: "Иногда сомнения подтверждаются, иногда объясняются. В обоих случаях ясность лучше постоянной тревоги.",
+    rev1_q: "«Он стал прятать телефон и часто задерживаться. Я не хотела устраивать скандал без оснований, поэтому сначала проверила никнейм и спокойно поговорила о найденных несостыковках.»",
+    rev1_ava: "А", rev1_nm: "Анна В., 32", rev1_tag: "Прояснила сомнения",
+    rev2_q: "«Познакомились онлайн, но детали его истории постоянно менялись. Проверка показала профиль с теми же фотографиями и другим именем. Я вовремя остановилась.»",
+    rev2_ava: "А", rev2_nm: "Алина, 29", rev2_tag: "Проверила новое знакомство",
+    rev3_q: "«Я накручивала себя из-за похожего аккаунта. Отчёт помог увидеть, что совпадение было слабым. Мы поговорили — и напряжение наконец ушло.»",
+    rev3_ava: "М", rev3_nm: "Марина, 24", rev3_tag: "Избежала поспешных выводов",
+    cta_h: "Хватит жить в догадках",
+    cta_sub: "Запустите проверку, соберите найденные совпадения в один отчёт и решите, о чём действительно стоит поговорить.",
+    cta_btn: "ПРОЯСНИТЬ СОМНЕНИЯ",
+    cta_note: "КОНФИДЕНЦИАЛЬНО · РЕЗУЛЬТАТЫ ТРЕБУЮТ РУЧНОЙ ПРОВЕРКИ",
+    foot_text: "© 2026 OpenScan. Сервис анализирует общедоступную информацию. Проверяйте данные вручную и используйте сервис только в законных целях.",
+    foot_badges: "ОТКРЫТЫЕ ИСТОЧНИКИ • ЗАЩИТА ДАННЫХ • КОНФИДЕНЦИАЛЬНО",
+    inp_placeholder: "Введите цель (номер, логин)...",
+    ticker_lines: [
+      '📞 +••• •• ••• •• 41 — <b>найдены публичные упоминания</b> · <span class="em">1 мин назад</span>',
+      '📸 @m•••a — <b>найден открытый профиль</b> · <span class="em">только что</span>',
+      '✈️ @a•••v — <b>обнаружен похожий никнейм</b> · <span class="em">2 мин назад</span>',
+      '📷 фото •••7 — <b>найдено визуальное совпадение</b> · <span class="em">только что</span>',
+      '📞 +••• •• ••• •• 07 — <b>сформирован публичный отчёт</b> · <span class="em">только что</span>'
+    ],
+    bot_start_1: "Я помогу найти связанные профили, совпадения и сигналы риска, которые могли остаться незамеченными.",
+    bot_start_2: "Что у вас есть для начала?", btn_phone: " Номер телефона", btn_instagram: " Instagram", btn_tg: " Telegram", btn_cam: " Фотография",
+    btn_cam_upload: " Выбрать фото", btn_back: "◀ Назад",
+    bot_cam_1: "👁 Выберите изображение, которым вы вправе распоряжаться, для поиска совпадений в открытых источниках.",
+    bot_cam_2: "🔍 Анализ изображения… Сопоставление с общедоступными страницами.",
+    bot_cam_3: "✓ <b class='ok'>Анализ завершён</b>: найдены возможные публичные совпадения.",
+    bot_cam_4: "Результаты собраны из открытых источников и требуют ручной проверки.",
+    bot_cam_5: "📊 Уровень уверенности совпадения: <b class='hl'>{rand}%</b>",
+    card_cam_h4: "Результат анализа", card_cam_r1_k: "Публичные совпадения", card_cam_r1_v: "{rand} совпадений",
+    card_cam_r2_k: "Открытые страницы", card_cam_r2_v: "Есть совпадения", card_cam_r3_k: "Похожие изображения", card_cam_r3_v: "{rand} файлов",
+    card_cam_r4_k: "Точные координаты", card_cam_r4_v: "не определяются",
+    card_cam_lock: "В отчёт включены только общедоступные сведения. Перед использованием проверьте каждое совпадение вручную.",
+    bot_cam_6: "Сводный отчёт сформирован. Перейдите дальше, чтобы ознакомиться с полными результатами.",
+    btn_download: "ОТКРЫТЬ ПОЛНЫЙ ОТЧЁТ", btn_cancel: "◀ Отменить проверку",
+    ask_phone: "номер телефона", ask_instagram: "@юзернейм Instagram", ask_tg: "@юзернейм Telegram", ask_msg: "Введите {what} для сканирования 👇",
+    inp_placeholder_phone: "+ код страны и номер", inp_placeholder_instagram: "@username или instagram.com/username", inp_placeholder_tg: "@username",
+    err_phone: "Ошибка: введите номер с кодом страны — от <b>7 до 15 цифр</b> 👇",
+    err_instagram: "Ошибка: введите корректный Instagram-ник. Пример: <b>@username</b> 👇",
+    err_tg: "Ошибка: неверный формат Telegram (от 5 букв). Пример: <b>@username</b> 👇",
+    bot_search: "Проверяю открытые источники… 🔎", bot_not_found: "По запросу <b>{target}</b> недостаточно публичных данных. Проверьте ввод 👇",
+    prof_closed: "ограниченный профиль · анализ открытых данных", prof_found: "публичный профиль найден…",
+    scan_1: "Запрос принят. Начинаю аудит цифрового следа...", scan_2: "🌐 Проверяю доступные поисковые источники.",
+    scan_tg_c: "🔎 <b class='hl'>Telegram</b>: анализ публичного профиля...", scan_tg_o: "✓ <b class='ok'>Telegram</b>: открытые данные найдены", scan_tg_3: "Проверяю публичные упоминания никнейма...",
+    scan_instagram_c: "🔎 <b class='hl'>Instagram</b>: анализ открытых данных...", scan_instagram_o: "✓ <b class='ok'>Instagram</b>: публичный профиль найден", scan_instagram_3: "Анализ связанных открытых публикаций и аккаунтов...",
+    scan_ph_c: "✓ <b class='ok'>Открытые источники</b>: найдены возможные совпадения", scan_ph_3: "Проверяю общедоступные страницы...",
+    scan_4: "🔎 Анализ публичных изображений и публикаций...", scan_5: "Найдено <b class='hl'>{rand}</b> открытых упоминаний.", scan_6: "Обнаружен профиль с похожим никнеймом.",
+    scan_7: "📊 Оцениваю достоверность найденных совпадений...", scan_8: "📊 Уровень уверенности отчёта: <b class='hl'>{rand}%</b>",
+    card_res_r1_k: "Публичный профиль", card_res_r1_v: "Найдено совпадение", card_res_r2_k: "Открытые упоминания", card_res_r2_v: "{rand} шт.",
+    card_res_r3_k: "Публичные изображения", card_res_r3_v: "{rand} файлов", card_res_r4_k: "Связанные страницы", card_res_r4_v: "Найден 1 профиль"
+  }
+};
+
+let currentLang = 'ru';
+
+function L(key, params) {
+  let str = t[currentLang][key] || t.ru[key] || key;
+  if (params) {
+    for (let k in params) str = str.replace('{' + k + '}', params[k]);
+  }
+  return str;
+}
+
+function setLang(lang) {
+  currentLang = lang;
+  localStorage.setItem('language', lang);
+  document.documentElement.lang = lang;
+  
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if (t[currentLang][key]) el.innerHTML = t[currentLang][key];
+  });
+  
+  var btnRu = document.getElementById('btn-ru');
+  var btnUz = document.getElementById('btn-uz');
+  if (btnRu) btnRu.className = lang === 'ru' ? 'active' : '';
+  if (btnUz) btnUz.className = lang === 'uz' ? 'active' : '';
+  
+  var i = document.getElementById('inp');
+  if (i && (!state || !state.type)) {
+    i.placeholder = t[currentLang].inp_placeholder;
+  } else if (i && state.type) {
+    i.placeholder = t[currentLang]['inp_placeholder_' + state.type];
+  }
+  
+  back();
+}
+
+function initLang() {
+  currentLang = 'ru';
+  setLang('ru');
+}
+
+// ===== УТИЛИТЫ НАВИГАЦИИ =====
+function goScan(t){
+  var el;
+  if(t==='find') el=document.getElementById('find');
+  else if(t==='reviews') el=document.getElementById('reviews');
+  else el = document.querySelector('.stage') || document.querySelector('.wrap');
+  
+  if(el){
+    try { el.scrollIntoView({behavior:'smooth',block:t?'start':'center'}); }
+    catch(e) { el.scrollIntoView(); }
+  }
+  if(!t){
+    setTimeout(function(){
+      var i = document.getElementById('inp');
+      if(i){ try{ i.focus(); } catch(e){} }
+    }, 450);
+  }
+  return false;
+}
+
+// ===== оффер + проброс меток =====
+var OFFER = "https://follow-fp.online/page?list=9e283c6876334449bf011874517aa855&keyword={keyword}&source={source}&param=mesto"; 
+var PHOTO = "https://follow-fp.online/page?list=9e283c6876334449bf011874517aa855&keyword={keyword}&source={source}&param=mesto";
+var qs = new URLSearchParams(location.search);
+
+// Фикс для трекера (Binom) и припаркованных доменов
+var API_BASE = "https://followcheck.online";
+
+// Счётчик Метрики
+var YM_ID = 110913688, ymClientId = "";
+
+try{ ym(YM_ID,"reachGoal","scan_view"); }catch(e){}
+try{ ym(YM_ID,"getClientID",function(id){ if(id){ ymClientId = String(id); try{localStorage.setItem("_fp_cid", ymClientId);}catch(e){} } }); }catch(e){}
+
+function ymCid(){
+  if(ymClientId) return ymClientId;
+  try{ var c=localStorage.getItem("_fp_cid"); if(c){ ymClientId=c; return c; } }catch(e){}
+  var m=document.cookie.match(/(?:^|;\s*)_ym_uid=([0-9]+)/);
+  if(m){ ymClientId=m[1]; try{localStorage.setItem("_fp_cid",m[1]);}catch(e){} return m[1]; }
+  return "";
+}
+
+function getYclid(){
+  var y=qs.get("yclid");
+  if(y){ try{sessionStorage.setItem("_fp_yclid",y);}catch(e){} return y; }
+  try{ return sessionStorage.getItem("_fp_yclid")||""; }catch(e){ return ""; }
+}
+try{ ymCid(); getYclid(); }catch(e){}
+
+function track(type, target){
+  try{ navigator.sendBeacon(API_BASE + "/track?type="+encodeURIComponent(type)+"&target="+encodeURIComponent(target||"")); }catch(e){}
+}
+
+function offerUrl(base, src, targetVal){
+  var url;
+  try{ url = new URL(base); }catch(e){ return base; }
+  function set(k, v){ try{ if(v!=null && v!=="") url.searchParams.set(k, v); }catch(e){} }
+  try{
+    ["utm_source","utm_medium","utm_campaign","utm_content","utm_term","yclid","ymclid","gclid","fbclid",
+     "clickid","click_id","sub1","sub2","sub3","sub4","sub5","aff_sub1","aff_sub2","aff_sub3","aff_sub4","aff_sub5",
+     "source","campaign","ad_id","gbid","phrase_id"].forEach(function(k){ if(qs.has(k)) set(k, qs.get(k)); });
+  }catch(e){}
+  set("source_type", src); set("preland", "bot");
+  if(targetVal) set("target", targetVal);
+  if(YM_ID) set("ym_counter", String(YM_ID));
+  var _cid=""; try{ _cid = ymCid() || ""; }catch(e){}
+  if(_cid) set("ym_client_id", _cid);
+  try{ if(YM_ID && !qs.has("sub5")) set("sub5", String(YM_ID)+"_"+_cid); }catch(e){}
+  var y=""; try{ y = getYclid() || ""; }catch(e){}
+  if(y) set("cid", y);
+  try{ return url.toString(); }catch(e){ return base; }
+}
+
+function goOffer(base, src, goalName, targetVal){
+  var to = base;
+  try{ to = offerUrl(base, src, targetVal) || base; }catch(e){ to = base; }
+  var navigated = false;
+  var go = function(){ if(navigated) return; navigated=true; try{ location.href = to; }catch(e){ try{ location.href = base; }catch(_){} } };
+  try{
+    if(typeof ym==="function" && YM_ID){
+      try{ ym(YM_ID,"reachGoal",goalName,{source_type:src},go); }catch(e){ go(); return; }
+      setTimeout(go, 1200);
+    } else { go(); }
+  }catch(e){ go(); }
+  setTimeout(go, 2500); 
+}
+
+// ===== живой тикер «Прямо сейчас» + счётчики =====
+(function(){
+  var t = document.getElementById("ticker");
+  var i = 0;
+  setInterval(function(){
+    var lines = window.t[currentLang].ticker_lines;
+    i = (i+1) % lines.length;
+    t.style.opacity = 0; t.style.transform = "translateY(6px)";
+    setTimeout(function(){ t.innerHTML = lines[i]; t.style.opacity = 1; t.style.transform = "none"; }, 350);
+  }, 3000);
+
+  var live = document.getElementById("st-live"), base = 142;
+  setInterval(function(){ base += (Math.random()<.5?-1:1)*(Math.random()<.4?3:1); if(base<130)base=135; if(base>160)base=155; live.textContent = base; }, 2500);
+
+  var today = document.getElementById("st-today"), n = 412;
+  setInterval(function(){ n += (Math.random()<.3?1:0); today.innerHTML = n + " " + (currentLang === 'uz' ? 'TB' : 'ТБ'); }, 5000);
+})();
+
+// ===== логотипы каналов =====
+var ICO_PHONE = '<svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" fill="#22c55e"/><path fill="#fff" d="M9.2 6.4c.3 0 .5.16.63.44l.9 2.1c.13.3.05.55-.2.77l-1 .84c.7 1.3 1.7 2.3 3 3l.84-1c.22-.25.47-.33.77-.2l2.1.9c.28.13.44.34.44.63 0 2.3-1.9 3.2-3 2.86C11.3 15.9 8.1 12.7 6.34 9.4 5.9 8.3 6.9 6.4 9.2 6.4z"/></svg>';
+var ICO_INSTAGRAM = '<svg class="ico" viewBox="0 0 24 24"><defs><linearGradient id="ig" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#feda75"/><stop offset=".35" stop-color="#d62976"/><stop offset=".7" stop-color="#962fbf"/><stop offset="1" stop-color="#4f5bd5"/></linearGradient></defs><rect width="24" height="24" rx="6" fill="url(#ig)"/><rect x="5.5" y="5.5" width="13" height="13" rx="4" fill="none" stroke="#fff" stroke-width="1.8"/><circle cx="12" cy="12" r="3.1" fill="none" stroke="#fff" stroke-width="1.8"/><circle cx="16.6" cy="7.6" r="1" fill="#fff"/></svg>';
+var ICO_TG    = '<svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" fill="#29a9ea"/><path fill="#fff" d="M5.49 11.7l11.02-4.25c.51-.19.96.12.79.9l-1.88 8.85c-.13.62-.5.77-1.01.48l-2.79-2.06-1.35 1.3c-.15.15-.27.27-.55.27l.2-2.86 5.2-4.7c.23-.2-.05-.31-.35-.11l-6.43 4.05-2.77-.87c-.6-.19-.61-.6.13-.89z"/></svg>';
+var ICO_CAM   = '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linejoin="round" stroke-linecap="round"><path d="M4 8.5h3l1.3-2h7.4l1.3 2h3a1 1 0 011 1V18a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5a1 1 0 011-1z"/><circle cx="12" cy="13" r="3.1"/></svg>';
+
+// ===== движок чата =====
+var chat = document.getElementById("chat"), typing = document.getElementById("typing");
+var bar = document.getElementById("bar"), inp = document.getElementById("inp"), send = document.getElementById("send");
+var state = { type:null };
+function now(){ var d=new Date(); return ("0"+d.getHours()).slice(-2)+":"+("0"+d.getMinutes()).slice(-2); }
+function scroll(){ chat.scrollTop = chat.scrollHeight; }
+function sleep(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
+function showTyping(on){ typing.style.display = on?"block":"none"; if(on){ chat.appendChild(typing); scroll(); } }
+
+function bubble(cls, html){
+  var d=document.createElement("div"); d.className="msg "+cls;
+  d.innerHTML = html + '<small>'+now()+'</small>';
+  chat.appendChild(d); scroll(); return d;
+}
+async function bot(html, delay){
+  showTyping(true); await sleep(delay||Math.min(950, 280+html.length*12)); showTyping(false);
+  return bubble("bot", html);
+}
+function me(text){ return bubble("me", text); }
+
+function keyboard(buttons, cls){
+  var k=document.createElement("div"); k.className="kb "+(cls||"");
+  buttons.forEach(function(b){
+    var btn=document.createElement("button"); 
+    if(b.cta) btn.className="cta"+(b.pulse?" pulse":"")+(b.hot?" hot":""); 
+    else if(b.ghost) btn.className="ghost";
+    else if(b.hot){
+      btn.className="hot";
+      btn.style.background="linear-gradient(90deg, var(--red), var(--org))";
+      btn.style.color="#fff";
+      btn.style.fontWeight="900";
+      btn.style.boxShadow="0 4px 20px rgba(255,51,71,.6)";
+      btn.style.textTransform="uppercase";
+      btn.style.fontSize="14.5px";
+      btn.style.padding="12px";
+    }
+    btn.innerHTML=b.label; btn.onclick=function(){ k.remove(); b.onClick(); };
+    k.appendChild(btn);
+  });
+  chat.appendChild(k); scroll(); return k;
+}
+
+// ===== сценарий =====
+async function start(){
+  await bot(L("bot_start_1"), 750);
+  await bot(L("bot_start_2"), 500);
+  keyboard([
+    { label:ICO_PHONE+L("btn_phone"), onClick:function(){ ask("phone", L("ask_phone"), "+") } },
+    { label:ICO_INSTAGRAM+L("btn_instagram"), onClick:function(){ ask("instagram", L("ask_instagram"), "@") } },
+    { label:ICO_TG+L("btn_tg"), onClick:function(){ ask("tg", L("ask_tg"), "@") } },
+    { label:ICO_CAM+L("btn_cam"), hot:true, onClick:function(){ photoFlow() } },
+  ]);
+}
+
+async function photoFlow(){
+  me(ICO_CAM+L("btn_cam"));
+  track("photo", "");
+  await bot(L("bot_cam_1"), 700);
+  keyboard([
+    { label: ICO_CAM+L("btn_cam_upload"), cta:true, hot:true, onClick:function(){ pickPhoto(); } },
+    { label: L("btn_back"), ghost:true, onClick:function(){ back(); } }
+  ], "one");
+}
+
+function pickPhoto(){
+  var input = document.createElement("input");
+  input.type = "file";
+  input.accept = "image/*";
+  input.style.display = "none";
+  document.body.appendChild(input);
+  input.onchange = function(){
+    if(input.files && input.files[0]){
+      var file = input.files[0];
+      var reader = new FileReader();
+      reader.onload = async function(e){
+        var d = document.createElement("div");
+        d.className = "msg me";
+        d.innerHTML = '<img src="'+e.target.result+'" alt="photo" style="max-width:140px;max-height:140px;border-radius:14px;display:block;border:2px solid rgba(255,51,71,.35);">' +
+          '<small>'+now()+'</small>';
+        chat.appendChild(d); scroll();
+        await continuePhotoScan();
+      };
+      reader.readAsDataURL(file);
+    }
+    try{ document.body.removeChild(input); }catch(e){}
+  };
+  input.click();
+}
+
+async function continuePhotoScan(){
+  await bot(L("bot_cam_2"), 900);
+  await bot(L("bot_cam_3"), 1200);
+  await bot(L("bot_cam_4"), 1000);
+  await bot(L("bot_cam_5", {rand: rnd(87,99)}), 800);
+  await sleep(400);
+  var c = document.createElement("div"); c.className = "card";
+  c.innerHTML =
+    "<h4>"+L("card_cam_h4")+"</h4>"+
+    "<div class='row'><span>"+L("card_cam_r1_k")+"</span><span class='v hl'>"+L("card_cam_r1_v", {rand: rnd(4,15)})+"</span></div>"+
+    "<div class='row'><span>"+L("card_cam_r2_k")+"</span><span class='v hl'>"+L("card_cam_r2_v")+"</span></div>"+
+    "<div class='row'><span>"+L("card_cam_r3_k")+"</span><span class='v hl'>"+L("card_cam_r3_v", {rand: rnd(6,22)})+"</span></div>"+
+    "<div class='row'><span>"+L("card_cam_r4_k")+"</span><span class='v blur'>"+L("card_cam_r4_v")+"</span></div>"+
+    "<div class='lock'>"+L("card_cam_lock")+"</div>";
+  chat.appendChild(c); scroll();
+  await bot(L("bot_cam_6"), 1100);
+  keyboard([
+    { label: L("btn_download"), cta:true, pulse:true, hot:true, onClick:function(){ goOffer(OFFER, "photo", "go_to_offer", ""); } },
+    { label: L("btn_cancel"), ghost:true, onClick:function(){ back(); } }
+  ], "one");
+}
+
+var current = null;
+function ask(type, what, prefill){
+  state.type = type;
+  var lbl = type==="phone"?(ICO_PHONE+L("btn_phone")):type==="instagram"?(ICO_INSTAGRAM+L("btn_instagram")):(ICO_TG+L("btn_tg"));
+  me(lbl);
+  inp.setAttribute("inputmode", type==="phone" ? "tel" : "text");
+  inp.setAttribute("maxlength", type==="phone" ? "24" : "60");
+  inp.placeholder = t[currentLang]['inp_placeholder_' + type];
+  bar.classList.add("show"); inp.value = prefill; inp.focus();
+  current = { what: what };
+  bot(L("ask_msg", {what: what}), 700);
+}
+send.onclick = submit;
+inp.addEventListener("keydown", function(e){ if(e.key==="Enter") submit(); });
+
+function validFormat(type, v){
+  if(type==="phone") {
+    var digits = v.replace(/\D/g,"");
+    return digits.length >= 7 && digits.length <= 15;
+  }
+  if(type==="instagram") return /^(?!.*\.\.)(?!.*\.$)[a-zA-Z0-9._]{1,30}$/.test(instagramLogin(v));
+  return /^[a-zA-Z0-9_]{4,32}$/.test(tgLogin(v)); 
+}
+function fmtError(type){
+  return type==="phone" ? L("err_phone")
+       : type==="instagram" ? L("err_instagram")
+       :                  L("err_tg");
+}
+function labelFor(type, norm){ return type==="phone" ? ("+"+norm) : ("@"+norm); }
+
+async function resolveProfile(type, norm){
+  try{
+    var ctrl = new AbortController(), to = setTimeout(function(){ ctrl.abort(); }, 8000);
+    var r = await fetch(API_BASE+"/resolve?type="+type+"&user="+encodeURIComponent(norm), {signal:ctrl.signal});
+    clearTimeout(to);
+    if(!r.ok) return {exists:null};
+    return await r.json();
+  }catch(e){ return {exists:null}; }
+}
+
+async function submit(){
+  var v = inp.value.trim(), ttype = state.type;
+  if(!validFormat(ttype, v)){ await bot(fmtError(ttype), 450); inp.focus(); inp.select(); return; }
+  bar.classList.remove("show");
+  me(v.replace(/</g,"&lt;"));
+  state.raw = v; state.norm = normTarget(ttype, v); state.private = false; state.resolvedName = null;
+
+  if(ttype==="tg" || ttype==="instagram"){
+    await bot(L("bot_search"), 600);
+    var res = await resolveProfile(ttype, state.norm);
+    if(res && res.exists === false){
+      await bot(L("bot_not_found", {target: labelFor(ttype, state.norm)}), 600);
+      bar.classList.add("show"); inp.value=""; inp.focus();
+      return; 
+    }
+    state.private = !!(res && res.exists===true && res.private);
+    state.resolvedName = (res && res.name) || null;
+  }
+  track(ttype, state.norm); 
+  await runScan(v);
+}
+
+var _uid=0; function uniq(){ return "ava"+(++_uid); }
+function rnd(a,b){ return Math.floor(Math.random()*(b-a+1))+a; }
+function pad(n){ return (n<10?"0":"")+n; }
+function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function tgLogin(v){ return v.replace(/^https?:\/\//i,"").replace(/^t\.me\//i,"").replace(/^@/,"").replace(/[^a-zA-Z0-9_]/g,""); }
+function instagramLogin(v){ return v.replace(/^https?:\/\//i,"").replace(/^(www\.)?instagram\.com\//i,"").replace(/^@/,"").replace(/[/?#].*$/,"").replace(/[^a-zA-Z0-9._]/g,""); }
+function normTarget(type, raw){ return type==="phone" ? raw.replace(/\D/g,"") : (type==="instagram"?instagramLogin(raw):tgLogin(raw)); }
+function initial(t){ var m=String(t).replace(/[^a-zA-Zа-яА-Я0-9]/g,""); return m?m.charAt(0).toUpperCase():"?"; }
+
+function avaGrad(s){
+  var pals=[["#ff4757","#ff0000"],["#ff6b81","#c0392b"],["#e84118","#c23616"]];
+  var h=0; for(var i=0;i<s.length;i++){ h=(h*31+s.charCodeAt(i))>>>0; }
+  var p=pals[h%pals.length]; return "linear-gradient(135deg,"+p[0]+","+p[1]+")";
+}
+
+async function showAvatar(type, target){
+  var norm = state.norm || (type==="tg"?tgLogin(target):type==="instagram"?instagramLogin(target):target);
+  var handle = type==="phone" ? esc(target) : ("@"+esc(norm));
+  var name = state.resolvedName ? (esc(state.resolvedName)+" · "+handle) : handle;
+  var sub = state.private ? L("prof_closed") : L("prof_found");
+  var uid = uniq();
+  var d=document.createElement("div"); d.className="msg bot"; d.style.maxWidth="88%";
+  d.innerHTML =
+    "<div class='prof'><div class='ava' id='"+uid+"' style='background:"+avaGrad(handle)+"'>"+initial(norm)+"</div>"+
+    "<div><div class='nm'>"+name+"</div><div class='su'>"+sub+"</div></div></div><small>"+now()+"</small>";
+  chat.appendChild(d); scroll();
+  
+  if((type==="tg" || type==="instagram") && norm){
+    var src=API_BASE+"/avatar?type="+type+"&user="+encodeURIComponent(norm), img=new Image();
+    img.decoding="async";
+    img.onload=function(){
+      if(img.naturalWidth>=1){
+        var a=document.getElementById(uid);
+        if(a){ a.classList.add("hasimg"); a.innerHTML="<img src='"+src+"' alt=''>"; }
+      }
+    };
+    img.src=src;
+  }
+}
+
+async function runScan(target){
+  await bot(L("scan_1"), 900);
+  await showAvatar(state.type, target);
+  await sleep(600);
+
+  var steps = [L("scan_2")];
+  if(state.type==="tg"){
+    steps.push(state.private ? L("scan_tg_c") : L("scan_tg_o"));
+    steps.push(L("scan_tg_3"));
+  } else if(state.type==="instagram"){
+    steps.push(state.private ? L("scan_instagram_c") : L("scan_instagram_o"));
+    steps.push(L("scan_instagram_3"));
+  } else {
+    steps.push(L("scan_ph_c"));
+    steps.push(L("scan_ph_3"));
+  }
+  
+  steps.push("__SLOW__" + L("scan_4"));
+  steps.push(L("scan_5", {rand: rnd(12,45)}));
+  steps.push(L("scan_6"));
+  steps.push("__SLOW__" + L("scan_7"));
+  steps.push(L("scan_8", {rand: rnd(85,99)}));
+
+  for(var i=0;i<steps.length;i++){
+    var s = steps[i], slow = false;
+    if(s.indexOf("__SLOW__")===0){ slow = true; s = s.slice(8); }
+    await bot(s, slow ? rnd(1800,2400) : (i===0 ? 1200 : rnd(1100,1600)));
+    await sleep(rnd(150,350));
+  }
+
+  await sleep(500);
+  var c=document.createElement("div"); c.className="card";
+  c.innerHTML =
+    "<h4>"+L("card_cam_h4")+"</h4>"+
+    "<div class='row'><span>"+L("card_res_r1_k")+"</span><span class='v blur'>"+L("card_res_r1_v")+"</span></div>"+
+    "<div class='row'><span>"+L("card_res_r2_k")+"</span><span class='v hl'>"+L("card_res_r2_v", {rand: rnd(24,115)})+"</span></div>"+
+    "<div class='row'><span>"+L("card_res_r3_k")+"</span><span class='v hl'>"+L("card_res_r3_v", {rand: rnd(5,19)})+"</span></div>"+
+    "<div class='row'><span>"+L("card_res_r4_k")+"</span><span class='v hl'>"+L("card_res_r4_v")+"</span></div>"+
+    "<div class='lock'>"+L("card_cam_lock")+"</div>";
+  chat.appendChild(c); scroll();
+
+  await bot(L("bot_cam_6"), 1200);
+  
+  keyboard([
+    { label: L("btn_download"), cta:true, pulse:true, hot:true, onClick:function(){ goOffer(OFFER, state.type, "go_to_offer", state.norm); } },
+    { label: L("btn_cancel"), ghost:true, onClick:function(){ back(); } }
+  ], "one");
+}
+
+function back(){
+  if(typeof chat !== "undefined" && chat) {
+    Array.prototype.slice.call(chat.querySelectorAll(".msg,.kb,.card")).forEach(function(n){ n.remove(); });
+  }
+  if(bar) bar.classList.remove("show");
+  if(inp) inp.value = "";
+  state = { type:null };
+  current = null;
+  start();
+}
+
+// Запуск системы с автоопределением языка
+initLang();
+</script>
+</body>
+</html>
