@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://followpulse.ru/sitemap.xml
+Sitemap: https://lybia86.github.io/sitemap.xml
