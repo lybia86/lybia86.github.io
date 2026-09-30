@@ -1,0 +1,454 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Определение местонахождения абонента по номеру | FollowPulse</title>
+<link rel="icon" href="data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3e%3crect width='32' height='32' rx='8' fill='%232AABEE'/%3e%3cpath d='M12 20a6 6 0 1 1 8-8' stroke='white' stroke-width='2.4' fill='none' stroke-linecap='round'/%3e%3ccircle cx='16' cy='16' r='2.2' fill='white'/%3e%3c/svg%3e">
+<style>
+  :root{ --tg:#2AABEE; --tg2:#229ED9; --bot:#1e2a37; --me:#2b5278; --ink:#e8eef4; --muted:#8aa0b4; --line:#2a3a49;
+    --red:#ff6b81; --org:#ff9a3c; }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+  html,body{margin:0;min-height:100%}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    color:#fff; min-height:100vh; min-height:100dvh;
+    background:
+      radial-gradient(900px 520px at 32% -8%, rgba(255,90,80,.20), transparent 60%),
+      radial-gradient(700px 480px at 78% 0%, rgba(42,171,238,.10), transparent 60%),
+      #0b0b0e;
+  }
+  /* ==== раскладка: слева преленд, справа чат ==== */
+  .wrap{
+    max-width:1140px; margin:0 auto; min-height:100vh; min-height:100dvh;
+    display:flex; align-items:center; justify-content:space-between; gap:48px; padding:40px 40px;
+  }
+  .hero{flex:1 1 auto; max-width:600px}
+  .stage{flex:0 0 auto; width:446px}
+  /* logo */
+  .logo{display:flex; align-items:center; gap:2px; font-weight:800; letter-spacing:.5px; font-size:22px; margin-bottom:36px}
+  .logo .bars{display:inline-flex; align-items:flex-end; gap:2.5px; height:20px; margin:0 3px 2px}
+  .logo .bars i{width:3.5px; border-radius:2px; display:block}
+  .logo .bars i:nth-child(1){height:9px;background:var(--tg)}
+  .logo .bars i:nth-child(2){height:17px;background:#fff}
+  .logo .bars i:nth-child(3){height:12px;background:var(--red)}
+  /* headline */
+  .h1{font-size:44px; line-height:1.08; font-weight:800; letter-spacing:-.5px; margin:0 0 18px}
+  .h1 .g{background:linear-gradient(92deg,var(--red),var(--org)); -webkit-background-clip:text; background-clip:text; color:transparent}
+  .sub{font-size:17.5px; line-height:1.55; color:#c4c8d0; max-width:490px; margin:0 0 26px}
+  .sub b{color:#fff; font-weight:650}
+  /* живой тикер «прямо сейчас» */
+  .live{background:rgba(255,255,255,.045); border:1px solid rgba(255,255,255,.09); border-radius:16px;
+    padding:14px 16px; max-width:470px; backdrop-filter:blur(4px)}
+  .live .lab{display:flex; align-items:center; gap:8px; font-size:12.5px; letter-spacing:.4px; text-transform:uppercase; color:#9aa0ab; font-weight:600; margin-bottom:8px}
+  .live .lab .dot{width:8px;height:8px;border-radius:50%;background:#37d67a;box-shadow:0 0 0 0 rgba(55,214,122,.6);animation:ping 1.8s infinite}
+  @keyframes ping{0%{box-shadow:0 0 0 0 rgba(55,214,122,.55)}70%{box-shadow:0 0 0 9px rgba(55,214,122,0)}100%{box-shadow:0 0 0 0 rgba(55,214,122,0)}}
+  #ticker{font-size:15.5px; line-height:1.4; min-height:22px; transition:opacity .35s, transform .35s}
+  #ticker b{color:#ffb0bd}
+  #ticker .em{font-style:normal}
+  /* строка статистики */
+  .stats{display:flex; flex-wrap:wrap; align-items:center; gap:10px 14px; margin-top:18px; font-size:14px; color:#aab0ba}
+  .stats .s b{color:#fff; font-weight:750}
+  .stats .sep{opacity:.35}
+  .stats .grn{color:#37d67a; font-weight:700}
+  .hint{margin-top:26px; font-size:14.5px; color:#8b919c; display:flex; align-items:center; gap:9px}
+  .hint .arw{color:var(--tg); font-size:20px; animation:nudge 1.4s infinite}
+  @keyframes nudge{0%,100%{transform:translateX(0)}50%{transform:translateX(5px)}}
+
+  /* ==== чат-виджет (TG-стиль) ==== */
+  .phone{
+    width:100%; height:min(760px,86vh); display:flex; flex-direction:column; border-radius:22px; overflow:hidden;
+    background:#0e1723 url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3e%3ccircle cx='4' cy='4' r='1' fill='%23172433'/%3e%3c/svg%3e");
+    box-shadow:0 30px 80px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.06); color:var(--ink);
+  }
+  .hdr{ background:linear-gradient(180deg,#22303d,#1a2530); color:#fff; border-bottom:1px solid rgba(255,255,255,.05);
+    display:flex; align-items:center; gap:12px; padding:12px 14px; box-shadow:0 1px 6px rgba(0,0,0,.25); z-index:5; }
+  .hdr .av{width:42px;height:42px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+  .hdr .av svg{width:26px;height:26px}
+  .hdr .nm{font-weight:650;font-size:15.5px;line-height:1.15}
+  .hdr .st{font-size:12.5px;opacity:.85;display:flex;align-items:center;gap:5px}
+  .hdr .st b{width:7px;height:7px;border-radius:50%;background:#7ff58a;display:inline-block}
+  .hdr .menu{margin-left:auto;opacity:.9;font-size:22px;line-height:1;letter-spacing:2px}
+  .chat{flex:1;overflow-y:auto;padding:14px 12px 8px;display:flex;flex-direction:column;gap:8px;scroll-behavior:smooth}
+  .msg{max-width:84%;padding:8px 12px;border-radius:16px;font-size:15px;line-height:1.4;position:relative;
+    animation:pop .22s ease; white-space:pre-wrap; word-wrap:break-word}
+  @keyframes pop{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:none}}
+  .bot{align-self:flex-start;background:var(--bot);border-bottom-left-radius:5px;box-shadow:0 1px 2px rgba(0,0,0,.25)}
+  .me{align-self:flex-end;background:var(--me);color:#fff;border-bottom-right-radius:5px;box-shadow:0 1px 2px rgba(0,0,0,.25)}
+  .msg small{display:block;font-size:11px;color:var(--muted);text-align:right;margin-top:2px}
+  .msg b.hl{color:#ff8095}
+  .msg b.ok{color:#54d98c}
+  .typing{align-self:flex-start;background:var(--bot);border-radius:16px;border-bottom-left-radius:5px;padding:12px 15px;display:none;box-shadow:0 1px 2px rgba(0,0,0,.25)}
+  .typing span{display:inline-block;width:7px;height:7px;margin:0 2px;border-radius:50%;background:#5c7284;animation:blink 1.2s infinite}
+  .typing span:nth-child(2){animation-delay:.2s}.typing span:nth-child(3){animation-delay:.4s}
+  @keyframes blink{0%,60%,100%{opacity:.3;transform:translateY(0)}30%{opacity:1;transform:translateY(-3px)}}
+  .card{align-self:flex-start;max-width:88%;background:#17222e;border-radius:16px;border-bottom-left-radius:5px;
+    padding:14px;box-shadow:0 2px 10px rgba(0,0,0,.35);animation:pop .22s ease}
+  .card h4{margin:0 0 10px;font-size:15px;display:flex;align-items:center;gap:7px}
+  .card .row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--line);font-size:14px}
+  .card .row:last-child{border:none}
+  .card .row .v{font-weight:700}
+  .card .blur{filter:blur(5px);user-select:none;color:#ff8095}
+  .card .lock{margin-top:10px;font-size:12.5px;color:var(--muted);display:flex;align-items:center;gap:6px}
+  .ava{width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#2AABEE,#229ED9);color:#fff;
+    display:flex;align-items:center;justify-content:center;font-weight:700;font-size:21px;flex:0 0 auto;
+    background-size:cover;background-position:center;overflow:hidden}
+  .ava.hasimg{background:#0e1723}
+  .ava img{width:100%;height:100%;object-fit:cover;display:block;border-radius:50%}
+  .prof{display:flex;align-items:center;gap:11px}
+  .prof .nm{font-weight:650;font-size:15px}
+  .prof .su{font-size:12px;color:var(--muted)}
+  .kb{align-self:stretch;display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:2px 2px 4px;animation:pop .22s ease}
+  .kb.one{grid-template-columns:1fr}
+  .kb button{border:1px solid rgba(255,255,255,.06);background:#1e2a37;color:#7cc0f0;font-weight:600;font-size:14.5px;
+    padding:12px;border-radius:12px;box-shadow:0 1px 2px rgba(0,0,0,.2);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:.12s}
+  .kb button:active{transform:scale(.97);background:#24313f}
+  .kb button.ghost{background:transparent;border-color:rgba(255,255,255,.12);color:#93a3b3;box-shadow:none;font-weight:550}
+  .kb button.ghost:active{background:rgba(255,255,255,.04)}
+  .ico{width:18px;height:18px;flex:0 0 auto;vertical-align:-4px}
+  .kb button .ico{width:19px;height:19px}
+  .kb button.cta{grid-column:1/-1;background:linear-gradient(90deg,var(--tg),var(--tg2));color:#fff;font-size:16px;padding:15px;box-shadow:0 4px 14px rgba(42,171,238,.4)}
+  .kb button.cta.pulse{animation:pulse 1.6s infinite}
+  .kb button.cta.hot{background:linear-gradient(90deg,var(--red),var(--org));box-shadow:0 4px 14px rgba(255,107,129,.38)}
+  @keyframes pulse{0%,100%{box-shadow:0 4px 14px rgba(42,171,238,.4)}50%{box-shadow:0 4px 22px rgba(42,171,238,.75)}}
+  .bar{display:none;background:#16212c;border-top:1px solid var(--line);padding:8px 10px;gap:8px;align-items:center}
+  .bar.show{display:flex}
+  .bar input{flex:1;border:none;background:#22303c;border-radius:20px;padding:11px 15px;font-size:16px;outline:none;color:var(--ink)}
+  .bar input::placeholder{color:#728696}
+  .bar .send{width:42px;height:42px;border-radius:50%;border:none;background:var(--tg);color:#fff;flex:0 0 auto;cursor:pointer;font-size:19px}
+  .bar .send:active{background:var(--tg2)}
+
+  /* ==== адаптив ==== */
+  @media (max-width:900px){
+    .wrap{flex-direction:column; gap:26px; padding:26px 18px 30px; align-items:stretch}
+    .hero{max-width:none; text-align:center}
+    .logo{justify-content:center; margin-bottom:20px}
+    .h1{font-size:30px}
+    .sub{font-size:15.5px; margin:0 auto 20px}
+    .live{margin:0 auto} .stats{justify-content:center}
+    .hint{display:none}
+    .stage{width:100%; max-width:460px; margin:0 auto}
+    .phone{height:78vh; height:78dvh; min-height:520px}
+  }
+  @media (max-width:420px){
+    .kb{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+    .kb button{min-width:0;min-height:44px;padding:10px 5px;gap:5px;font-size:13px;white-space:nowrap}
+    .kb button .ico{width:18px;height:18px}
+  }
+  @media (max-width:900px) and (max-height:720px){ .h1{font-size:26px} .sub{display:none} }
+
+  /* ===== шапка / навбар ===== */
+  .nav{position:sticky;top:0;z-index:60;background:rgba(11,11,14,.82);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid rgba(255,255,255,.06)}
+  .nav-in{max-width:1140px;margin:0 auto;padding:13px 40px;display:flex;align-items:center;gap:22px}
+  .nav .logo{font-size:19px;margin:0}
+  .nav-links{display:flex;align-items:center;gap:26px;margin-left:18px}
+  .nav-links a{color:#cfd6df;text-decoration:none;font-weight:600;font-size:15px;transition:color .15s;cursor:pointer}
+  .nav-links a:hover{color:#fff}
+  .nav-hot{color:var(--red)!important}
+  .nav-cta{margin-left:auto;background:linear-gradient(92deg,var(--red),var(--org));color:#fff;font-weight:800;font-size:13.5px;letter-spacing:.6px;text-transform:uppercase;padding:12px 22px;border-radius:12px;text-decoration:none;box-shadow:0 8px 24px rgba(255,107,129,.28);white-space:nowrap;cursor:pointer;transition:filter .15s}
+  .nav-cta:hover{filter:brightness(1.07)}
+  .wrap{min-height:calc(100vh - 60px);min-height:calc(100dvh - 60px)}
+  /* ===== футер ===== */
+  .foot{border-top:1px solid rgba(255,255,255,.06);background:rgba(0,0,0,.28);color:#8b919c;font-size:12.5px;line-height:1.65}
+  .foot-in{max-width:900px;margin:0 auto;padding:26px 40px;text-align:center}
+  .foot-badges{margin-top:11px;color:#aab0ba;font-weight:600;letter-spacing:.4px}
+  @media(max-width:760px){.nav-links{display:none}.nav-in{padding:11px 16px}.nav-cta{padding:10px 15px;font-size:12.5px}.foot-in{padding:22px 16px}}
+  /* ===== секции под первым экраном ===== */
+  .sec{padding:70px 20px;border-top:1px solid rgba(255,255,255,.05)}
+  .sec-in{max-width:1080px;margin:0 auto}
+  .sec-h{font-size:34px;line-height:1.15;font-weight:800;text-align:center;margin:0 0 12px;letter-spacing:-.5px}
+  .sec-sub{color:#9aa2ad;font-size:17px;line-height:1.5;text-align:center;max-width:640px;margin:0 auto 44px}
+  .cards{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  .fcard{background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07);border-radius:18px;padding:26px}
+  .fcard .c-t{font-size:19px;font-weight:750;margin-bottom:10px;display:flex;align-items:center;gap:9px}
+  .fcard p{margin:0;color:#a7adb8;font-size:15px;line-height:1.6}
+  .revs{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px}
+  .rev{background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07);border-radius:18px;padding:26px;display:flex;flex-direction:column}
+  .rev .q{color:#d3d8df;font-size:15px;line-height:1.65;font-style:italic;margin:0 0 18px;flex:1}
+  .rev .who{display:flex;align-items:center;gap:12px;border-top:1px solid rgba(255,255,255,.07);padding-top:16px}
+  .rev .ava{width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,var(--red),var(--org));display:flex;align-items:center;justify-content:center;font-weight:800;font-size:18px;color:#fff;flex:0 0 auto}
+  .rev .nm{font-weight:700;font-size:15px}
+  .rev .tag{color:#8b919c;font-size:12.5px;margin-top:2px}
+  .fcta{padding:80px 20px 90px;text-align:center;position:relative;overflow:hidden}
+  .fcta::before{content:"";position:absolute;left:50%;top:42%;width:700px;height:700px;transform:translate(-50%,-50%);background:radial-gradient(circle,rgba(255,107,129,.16),transparent 62%);pointer-events:none}
+  .cta-in{position:relative;max-width:640px;margin:0 auto}
+  .cta-h{font-size:40px;line-height:1.1;font-weight:800;margin:0 0 16px;letter-spacing:-.5px}
+  .cta-sub{color:#a7adb8;font-size:17.5px;line-height:1.55;margin:0 0 30px}
+  .cta-btn{display:inline-block;background:linear-gradient(92deg,var(--red),var(--org));color:#fff;font-weight:800;font-size:17px;padding:19px 40px;border-radius:16px;text-decoration:none;cursor:pointer;box-shadow:0 14px 40px rgba(255,107,129,.4);transition:transform .12s,filter .12s}
+  .cta-btn:hover{filter:brightness(1.07);transform:translateY(-2px)}
+  .cta-note{margin-top:16px;color:#8b919c;font-size:13.5px}
+  @media(max-width:760px){.cards,.revs{grid-template-columns:1fr}.sec{padding:52px 16px}.sec-h{font-size:27px}.cta-h{font-size:30px}.fcta{padding:60px 16px 70px}}
+</style>
+
+<!-- Yandex.Metrika counter -->
+<script type="text/javascript">
+(function(m,e,t,r,i,k,a){
+    m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
+    m[i].l=1*new Date();
+    for(var j=0;j<document.scripts.length;j++){if(document.scripts[j].src===r){return;}}
+    k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)
+})(window, document, "script", "https://mc.yandex.ru/metrika/tag.js", "ym");
+
+ym(110913688, "init", {
+    clickmap:true,
+    trackLinks:true,
+    accurateTrackBounce:true,
+    webvisor:true
+});
+</script>
+<!-- /Yandex.Metrika counter -->
+
+<link rel="canonical" href="https://lybia86.github.io/opredelenie-mestonakhozhdeniya-abonenta-po-nomeru/">
+</head>
+<body>
+<noscript><div><img src="https://mc.yandex.ru/watch/110913688" style="position:absolute;left:-9999px;" alt="" /></div></noscript>
+<header class="nav">
+  <div class="nav-in">
+    <nav class="nav-links">
+      <a onclick="goScan('find')">Что проверяем</a>
+      <a onclick="goScan('how')">Как работает</a>
+      <a class="nav-hot" onclick="goScan()">📍 Проверить местоположение</a>
+    </nav>
+    <a class="nav-cta" onclick="goScan()">Начать проверку</a>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="hero">
+    <h1 class="h1">Определение местонахождения абонента</h1>
+    <p class="sub">Проверьте регион, формат номера и доступные источники геоданных абонента. <b>Проверка начинается с номера телефона.</b></p>
+
+    <div class="live">
+      <div class="lab"><span class="dot"></span> Проверка включает</div>
+      <div id="ticker">📍 доступные геосигналы и публичные геометки</div>
+    </div>
+
+    <div class="stats">
+      <span class="s">📞 По номеру телефона</span>
+      <span class="sep">·</span>
+      <span class="s">🧭 Проверка источников местоположения</span>
+      <span class="sep">·</span>
+      <span class="grn">Не гадайте — проверьте доступные геоданные</span>
+    </div>
+
+    <div class="hint"><span class="arw">➜</span> Введите номер в чате</div>
+  </div>
+
+  <div class="stage">
+    <div class="phone">
+      <div class="hdr">
+        <div class="av">
+          <svg viewBox="0 0 32 32" fill="none"><path d="M16 28s9-7.8 9-16a9 9 0 10-18 0c0 8.2 9 16 9 16z" stroke="#2AABEE" stroke-width="2.4"/><circle cx="16" cy="12" r="3.2" fill="#e0245e"/></svg>
+        </div>
+        <div>
+          <div class="nm">Проверка местоположения</div>
+          <div class="st"><b></b> сервис · онлайн</div>
+        </div>
+        <div class="menu">⋮</div>
+      </div>
+
+      <div class="chat" id="chat">
+        <div class="typing" id="typing"><span></span><span></span><span></span></div>
+      </div>
+
+      <div class="bar" id="bar">
+        <input id="inp" placeholder="+7 900 123-45-67" inputmode="tel" maxlength="18" autocomplete="tel">
+        <button class="send" id="send">➤</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<section id="find" class="sec">
+  <div class="sec-in">
+    <h2 class="sec-h">Что проверяется: определение местонахождения абонента</h2>
+    <p class="sec-sub">Сначала система определяет доступность источников, связанных с местоположением. Результат зависит от доступных данных и разрешений.</p>
+    <div class="cards">
+      <div class="fcard"><div class="c-t">📞 Номер и регион</div><p>Проверяем формат номера, код страны и доступные технические данные, необходимые для следующего этапа.</p></div>
+      <div class="fcard"><div class="c-t">📍 Геосигналы</div><p>Проверяем доступные источники местоположения и публичные геометки, которые могут быть связаны с номером.</p></div>
+      <div class="fcard"><div class="c-t">🧭 Доступность определения</div><p>Определяем, какие способы проверки местоположения доступны для указанного номера.</p></div>
+      <div class="fcard"><div class="c-t">🔐 Результат проверки</div><p>После предварительной проверки продолжите в защищённом сервисе, чтобы увидеть доступные варианты определения местоположения.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="how" class="sec">
+  <div class="sec-in">
+    <h2 class="sec-h">Как проходит проверка</h2>
+    <p class="sec-sub">Простой путь без лишних действий.</p>
+    <div class="revs">
+      <div class="rev"><p class="q">1. Введите номер телефона в форме проверки.</p><div class="who"><div class="ava">1</div><div><div class="nm">Номер</div><div class="tag">Проверяем формат и доступные источники</div></div></div></div>
+      <div class="rev"><p class="q">2. Система проверит, какие способы определения местоположения доступны для указанного номера.</p><div class="who"><div class="ava">2</div><div><div class="nm">Проверка</div><div class="tag">Доступные геоданные и источники</div></div></div></div>
+      <div class="rev"><p class="q">3. Продолжите проверку, чтобы узнать, какие данные о местоположении доступны для этого номера.</p><div class="who"><div class="ava">3</div><div><div class="nm">Результат</div><div class="tag">Меньше догадок — больше фактов</div></div></div></div>
+    </div>
+  </div>
+</section>
+
+<section class="fcta">
+  <div class="cta-in">
+    <h2 class="cta-h">Определение местонахождения абонента</h2>
+    <p class="cta-sub">Введите номер телефона и проверьте, какие данные о местоположении доступны. Не тратьте время на догадки — начните проверку сейчас.</p>
+    <a class="cta-btn" onclick="goScan()">📍 Начать проверку местоположения</a>
+    <div class="cta-note">По номеру телефона · конфиденциально · результат зависит от доступных данных</div>
+  </div>
+</section>
+
+<footer class="foot">
+  <div class="foot-in">
+    © 2026 Все права защищены. Доступность данных о местоположении зависит от источников, разрешений пользователя и условий используемого сервиса.
+    <div class="foot-badges">18+ • Конфиденциальность • Безопасность</div>
+  </div>
+</footer>
+
+<script>
+function goScan(t){
+  var el;
+  if(t==='find') el=document.getElementById('find');
+  else if(t==='how') el=document.getElementById('how');
+  else el=document.querySelector('.stage')||document.querySelector('.wrap');
+  if(el){ try{el.scrollIntoView({behavior:'smooth',block:t?'start':'center'});}catch(e){el.scrollIntoView();} }
+  if(!t){ setTimeout(function(){var i=document.getElementById('inp');if(i){try{i.focus();}catch(e){}}},450); }
+  return false;
+}
+</script>
+
+<script>
+var OFFER = "https://specic-scaners.ru/page?list=468a159d20ef4e85ac0269487c8dc488&campaign_id={campaign_id}&ad_id={ad_id}&keyword={keyword}&source={source}&source_type={source_type}&position_type={position_type}&position={position}&device_type={device_type}&region_id={region_id}&phrase_id={phrase_id}&param={param}";
+var qs = new URLSearchParams(location.search);
+
+function getYclid(){
+  var y=qs.get("yclid");
+  if(y){ try{sessionStorage.setItem("_fp_yclid",y);}catch(e){} return y; }
+  try{ return sessionStorage.getItem("_fp_yclid")||""; }catch(e){ return ""; }
+}
+try{ getYclid(); }catch(e){}
+
+function track(type, target){
+  try{ navigator.sendBeacon("/track?type="+encodeURIComponent(type)+"&target="+encodeURIComponent(target||"")); }catch(e){}
+}
+
+function offerUrl(base, src, targetVal){
+  var url;
+  try{ url = new URL(base); }catch(e){ return base; }
+  function set(k,v){ try{ if(v!=null && v!=="") url.searchParams.set(k,v); }catch(e){} }
+  try{
+    ["utm_source","utm_medium","utm_campaign","utm_content","utm_term","yclid","gclid","fbclid",
+     "clickid","click_id","sub1","sub2","sub3","sub4","sub5","aff_sub1","aff_sub2","aff_sub3","aff_sub4","aff_sub5",
+     "source","campaign","campaign_id","ad_id","gbid","keyword","source_type","position_type","position","device_type","region_id","phrase_id","param"].forEach(function(k){ if(qs.has(k)) set(k,qs.get(k)); });
+  }catch(e){}
+  if(!qs.has("source_type") && url.searchParams.get("source_type")==="{source_type}"){} else if(!url.searchParams.has("source_type")) set("source_type",src);
+  set("preland","geo_phone");
+  if(targetVal) set("target",targetVal);
+  var y=""; try{y=getYclid()||"";}catch(e){}
+  if(y) set("cid",y);
+  try{return url.toString();}catch(e){return base;}
+}
+
+function goOffer(base, src, goalName, targetVal){
+  try{ track(goalName||"go_to_offer", targetVal||""); }catch(e){}
+  try{ if(window.ym) ym(110913688,"reachGoal",goalName||"go_to_offer",{target:targetVal||""}); }catch(e){}
+  var to=base;
+  try{to=offerUrl(base,src,targetVal)||base;}catch(e){to=base;}
+  try{location.href=to;}catch(e){try{location.href=base;}catch(_){} }
+}
+
+(function(){
+  var t=document.getElementById("ticker");
+  var lines=[
+    '📍 доступные геосигналы и публичные геометки',
+    '🧭 доступность способов определения местоположения',
+    '📞 данные номера, необходимые для следующего этапа',
+    '🔐 подготовка защищённого перехода к проверке'
+  ];
+  var i=0;
+  setInterval(function(){
+    i=(i+1)%lines.length;
+    t.style.opacity=0;t.style.transform="translateY(6px)";
+    setTimeout(function(){t.innerHTML=lines[i];t.style.opacity=1;t.style.transform="none";},350);
+  },2800);
+})();
+
+var chat=document.getElementById("chat"), typing=document.getElementById("typing");
+var bar=document.getElementById("bar"), inp=document.getElementById("inp"), send=document.getElementById("send");
+var state={type:"phone",norm:""};
+
+function now(){var d=new Date();return ("0"+d.getHours()).slice(-2)+":"+("0"+d.getMinutes()).slice(-2);}
+function scroll(){chat.scrollTop=chat.scrollHeight;}
+function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}
+function showTyping(on){typing.style.display=on?"block":"none";if(on){chat.appendChild(typing);scroll();}}
+function bubble(cls,html){var d=document.createElement("div");d.className="msg "+cls;d.innerHTML=html+'<small>'+now()+'</small>';chat.appendChild(d);scroll();return d;}
+async function bot(html,delay){showTyping(true);await sleep(delay||Math.min(850,260+html.length*9));showTyping(false);return bubble("bot",html);}
+function me(text){return bubble("me",text);}
+function keyboard(buttons,cls){
+  var k=document.createElement("div");k.className="kb "+(cls||"");
+  buttons.forEach(function(b){var btn=document.createElement("button");if(b.cta)btn.className="cta"+(b.pulse?" pulse":"");else if(b.ghost)btn.className="ghost";btn.innerHTML=b.label;btn.onclick=function(){k.remove();b.onClick();};k.appendChild(btn);});
+  chat.appendChild(k);scroll();return k;
+}
+function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+function normPhone(v){return v.replace(/\D/g,"");}
+function validPhone(v){var n=normPhone(v);return n.length>=10 && n.length<=15;}
+function maskPhone(n){if(n.length<7)return "+"+n;return "+"+n.slice(0,2)+" ••• ••• "+n.slice(-2);}
+
+async function start(){
+  await bot("📍 Проверим доступность местоположения по номеру телефона.",500);
+  await bot("Введите номер человека, для которого хотите продолжить проверку 👇",450);
+  bar.classList.add("show");
+  inp.value=qs.get("phone")||"+7 ";
+  try{inp.focus();}catch(e){}
+}
+
+send.onclick=submit;
+inp.addEventListener("keydown",function(e){if(e.key==="Enter")submit();});
+
+async function submit(){
+  var v=inp.value.trim();
+  if(!validPhone(v)){
+    await bot("Проверьте номер: нужно ввести полный номер с кодом страны, например <b>+7 900 123-45-67</b> 👇",400);
+    inp.focus();inp.select();return;
+  }
+  bar.classList.remove("show");
+  me(esc(v));
+  state.norm=normPhone(v);
+  track("geo_phone",state.norm);
+  try{ if(window.ym) ym(110913688,"reachGoal","phone_submit"); }catch(e){}
+  await runGeoScan();
+}
+
+async function runGeoScan(){
+  await bot("Номер принят. Запускаю предварительную проверку… 🔎",650);
+  var steps=[
+    "✓ <b class='ok'>Номер</b>: формат и код страны проверены",
+    "🌐 Проверяю регион и доступные источники геоданных…",
+    "📍 Проверяю доступные геосигналы и публичные геометки…",
+    "🧭 Проверяю доступность способов определения местоположения…",
+    "✓ <b class='ok'>Предварительная проверка завершена</b>"
+  ];
+  for(var i=0;i<steps.length;i++){await bot(steps[i],i===0?650:850);await sleep(120);}
+
+  var c=document.createElement("div");c.className="card";
+  c.innerHTML=
+    "<h4>📍 Проверка номера завершена</h4>"+
+    "<div class='row'><span>Номер</span><span class='v'>"+maskPhone(state.norm)+"</span></div>"+
+    "<div class='row'><span>Геопроверка</span><span class='v'>доступна</span></div>"+
+    "<div class='row'><span>Статус</span><span class='v'>можно продолжить</span></div>"+
+    "<div class='row'><span>Далее</span><span class='v'>проверка геоданных</span></div>"+
+    "<div class='lock'>🔐 Дальнейшие данные открываются в основном сервисе. Доступность точного местоположения зависит от источников и разрешений.</div>";
+  chat.appendChild(c);scroll();
+
+  await bot("Предварительная проверка завершена. <b class='hl'>Не гадайте, где человек.</b> Продолжите, чтобы узнать, какие данные о местоположении доступны для этого номера.",700);
+  keyboard([
+    {label:"📍 Узнать местоположение",cta:true,pulse:true,onClick:function(){goOffer(OFFER,"geolocation","go_to_offer",state.norm);}},
+    {label:"◀ Другой номер",ghost:true,onClick:function(){back();}}
+  ],"one");
+}
+
+function back(){
+  Array.prototype.slice.call(chat.querySelectorAll(".msg,.kb,.card")).forEach(function(n){n.remove();});
+  bar.classList.remove("show");inp.value="";state={type:"phone",norm:""};start();
+}
+
+start();
+</script>
+</body>
+</html>
+
